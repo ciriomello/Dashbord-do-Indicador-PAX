@@ -10,12 +10,12 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
   :root {
-    --bg: #0b0f1a;
-    --surface: #333333;
-    --surface2: #1b103d;
+    --bg: #050b0c;
+    --surface: #130f31;
+    --surface2: #110a23;
     --border: #6d0101;
-    --text: #e8ecf4;
-    --text-dim: #7a8aaa;
+    --text: #f4f5f8;
+    --text-dim: #f5f5f5;
     --accent: #d46a00;
     --accent2: #710000;
     --soc: #4f8ef7;
@@ -63,18 +63,56 @@
     letter-spacing: 0.5px;
   }
   .header-sub { font-size: 10px; color: var(--text-dim); letter-spacing: 1px; margin-top: 2px; }
-  .legend-bar {
+  .legend-wrap {
+    position: relative;
     display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 10px;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 3px;
+  }
+  .legend-label {
+    font-size: 9px;
     color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
   .legend-grad {
-    width: 120px;
+    width: 180px;
+    height: 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    position: relative;
+    transition: height 0.2s;
+  }
+  .legend-grad:hover { height: 14px; }
+  .legend-tooltip {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--accent);
+    padding: 10px 14px;
+    z-index: 1000;
+    min-width: 230px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5);
+  }
+  .legend-wrap:hover .legend-tooltip { display: block; }
+  .legend-tooltip-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 10px;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .legend-tooltip-dot {
+    width: 10px;
     height: 10px;
-    background: linear-gradient(to right, #980002, #E25905, #EC8805, #FFDC5E);
     border-radius: 2px;
+    flex-shrink: 0;
   }
   
   .pillar-bar {
@@ -331,12 +369,16 @@
     <button class="pillar-btn"        id="btn-tec"    onclick="setPillar('tec')"    style="color:#b04ff7;border-color:#b04ff7;">● Tecnologia</button>
     <button class="pillar-btn"        id="btn-amb"    onclick="setPillar('amb')"    style="color:#4ff77a;border-color:#4ff77a;">● Ambiental</button>
   </div>
-  <div class="legend-bar" id="legend-bar">
-    <span id="leg-1">■ Muito Baixo</span>
-    <span id="leg-2">■ Baixo</span>
-    <span id="leg-3">■ Médio</span>
-    <span id="leg-4">■ Alto</span>
-    <span id="leg-5">■ Muito Alto</span>
+  <div class="legend-wrap">
+    <span class="legend-label">Faixas do índice</span>
+    <div class="legend-grad" id="legend-grad"></div>
+    <div class="legend-tooltip" id="legend-tooltip">
+      <div class="legend-tooltip-row"><div class="legend-tooltip-dot" id="ldot-1"></div><span id="leg-1">Muito Baixo</span></div>
+      <div class="legend-tooltip-row"><div class="legend-tooltip-dot" id="ldot-2"></div><span id="leg-2">Baixo</span></div>
+      <div class="legend-tooltip-row"><div class="legend-tooltip-dot" id="ldot-3"></div><span id="leg-3">Médio</span></div>
+      <div class="legend-tooltip-row"><div class="legend-tooltip-dot" id="ldot-4"></div><span id="leg-4">Alto</span></div>
+      <div class="legend-tooltip-row"><div class="legend-tooltip-dot" id="ldot-5"></div><span id="leg-5">Muito Alto</span></div>
+    </div>
   </div>
 </div>
 </header>
@@ -449,17 +491,18 @@ function initLegend() {
   const pal = PALETTES['geral'];
   const legs = ['leg-1','leg-2','leg-3','leg-4','leg-5'];
   const labels = [
-    `■ Muito Baixo (< ${q.p20.toFixed(2)})`,
-    `■ Baixo (≥ ${q.p20.toFixed(2)} e < ${q.p40.toFixed(2)})`,
-    `■ Médio (≥ ${q.p40.toFixed(2)} e < ${q.p60.toFixed(2)})`,
-    `■ Alto (≥ ${q.p60.toFixed(2)} e < ${q.p80.toFixed(2)})`,
-    `■ Muito Alto (≥ ${q.p80.toFixed(2)})`,
+    `Muito Baixo  (< ${q.p20.toFixed(2)})`,
+    `Baixo  (≥ ${q.p20.toFixed(2)} e < ${q.p40.toFixed(2)})`,
+    `Médio  (≥ ${q.p40.toFixed(2)} e < ${q.p60.toFixed(2)})`,
+    `Alto  (≥ ${q.p60.toFixed(2)} e < ${q.p80.toFixed(2)})`,
+    `Muito Alto  (≥ ${q.p80.toFixed(2)})`,
   ];
   legs.forEach((id, i) => {
-    const el = document.getElementById(id);
-    el.style.color = pal.leg[i];
-    el.textContent = labels[i];
+    document.getElementById(id).textContent = labels[i];
+    document.getElementById('ldot-' + (i+1)).style.background = pal.leg[i];
   });
+  // Update gradient bar
+  document.getElementById('legend-grad').style.background = `linear-gradient(to right, ${pal.leg.join(', ')})`;
 }
 
 function scoreColor(v, pillar) {
@@ -478,6 +521,7 @@ function setPillar(pillar) {
   currentPillar = pillar;
   const key = PILLAR_KEYS[pillar];
   const pal = PALETTES[pillar];
+  const q = QUARTILES[pillar];
 
   // Update buttons
   ['geral','soc','eco','tec','amb'].forEach(p => {
@@ -486,19 +530,18 @@ function setPillar(pillar) {
 
   // Update legend colors and labels
   const legs = ['leg-1','leg-2','leg-3','leg-4','leg-5'];
-  const q = QUARTILES[pillar];
   const labels = [
-    `■ Muito Baixo (< ${q.p20.toFixed(2)})`,
-    `■ Baixo (≥ ${q.p20.toFixed(2)} e < ${q.p40.toFixed(2)})`,
-    `■ Médio (≥ ${q.p40.toFixed(2)} e < ${q.p60.toFixed(2)})`,
-    `■ Alto (≥ ${q.p60.toFixed(2)} e < ${q.p80.toFixed(2)})`,
-    `■ Muito Alto (≥ ${q.p80.toFixed(2)})`,
+    `Muito Baixo  (< ${q.p20.toFixed(2)})`,
+    `Baixo  (≥ ${q.p20.toFixed(2)} e < ${q.p40.toFixed(2)})`,
+    `Médio  (≥ ${q.p40.toFixed(2)} e < ${q.p60.toFixed(2)})`,
+    `Alto  (≥ ${q.p60.toFixed(2)} e < ${q.p80.toFixed(2)})`,
+    `Muito Alto  (≥ ${q.p80.toFixed(2)})`,
   ];
   legs.forEach((id, i) => {
-    const el = document.getElementById(id);
-    el.style.color = pal.leg[i];
-    el.textContent = labels[i];
+    document.getElementById(id).textContent = labels[i];
+    document.getElementById('ldot-' + (i+1)).style.background = pal.leg[i];
   });
+  document.getElementById('legend-grad').style.background = `linear-gradient(to right, ${pal.leg.join(', ')})`;
 
   // Recolor map
   geojsonLayer.eachLayer(function(layer) {
